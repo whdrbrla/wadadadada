@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방구석 AI 퀴즈쇼 (최종 판정 버전)</title>
+  <title>방구석 AI 퀴즈쇼 (완벽 리셋 버전)</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -19,7 +19,7 @@
     h1 { text-align: center; margin: 0 0 20px; font-size: 24px; color: #5a42ec; }
     .hidden { display: none !important; }
     
-    /* 닉네임 입력 화면 */
+    /* 로그인 화면 */
     #login-screen input {
       width: 100%; padding: 12px; margin-bottom: 12px;
       border: 2px solid #ddd; border-radius: 12px; font-size: 16px; outline: none;
@@ -31,7 +31,7 @@
     }
     button:hover { background: #432bca; transform: translateY(-2px); }
 
-    /* 게임 진행 화면 */
+    /* 게임 화면 */
     .quiz-box {
       background: #f4f6f8; padding: 16px; border-radius: 14px;
       margin-bottom: 16px; min-height: 80px; display: flex;
@@ -43,7 +43,7 @@
       border: 2px solid #ddd; border-radius: 12px; font-size: 16px; text-align: center;
     }
     
-    /* 실시간 점수판 */
+    /* 점수판 */
     .scoreboard {
       margin-top: 20px; border-top: 2px dashed #ddd; padding-top: 16px;
     }
@@ -54,13 +54,9 @@
     }
     .is-me { color: #5a42ec; font-weight: bold; }
 
-    /* 🎉 최종 결과 화면 스타일 */
-    #result-screen {
-      text-align: center; padding: 10px 0;
-    }
-    .final-banner {
-      font-size: 48px; margin-bottom: 10px;
-    }
+    /* 결과 화면 */
+    #result-screen { text-align: center; padding: 10px 0; }
+    .final-banner { font-size: 48px; margin-bottom: 10px; }
     .my-final-score {
       font-size: 22px; font-weight: bold; color: #ff4757; margin-bottom: 24px;
       background: #ffeaa7; padding: 12px; border-radius: 12px;
@@ -78,11 +74,11 @@
 
     <div id="login-screen">
       <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="10" />
-      <button onclick="joinGame()">퀴즈쇼 입장하기</button>
+      <button onclick="joinGame()">퀴즈쇼 입장하기 (게임 리셋)</button>
     </div>
 
     <div id="game-screen" class="hidden">
-      <div class="quiz-box" id="question-display">접속 중...</div>
+      <div class="quiz-box" id="question-display">문제를 불러오는 중...</div>
       <input type="text" id="answer-input" placeholder="정답을 입력하고 엔터를 누르세요!" autocomplete="off" disabled />
       
       <div class="scoreboard">
@@ -105,16 +101,17 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+    // ⚠️ 중요: 발급받으신 본인의 apiKey와 appId를 반드시 아래에 붙여넣어 주세요!
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",          // 👈 본인의 API 키 입력
+      apiKey: "YOUR_API_KEY", // 👈 여기에 프로젝트 설정의 API 키 입력 필수!
       projectId: "test-90563", 
       databaseURL: "https://test-90563-default-rtdb.firebaseio.com/", 
-      appId: "YOUR_APP_ID"             // 👈 본인의 앱 ID 입력
+      appId: "YOUR_APP_ID"   // 👈 여기에 프로젝트 설정의 APP ID 입력 필수!
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const roomRef = ref(db, "quiz_room");
+    const roomRef = ref(db, "quiz_room/live_session"); // 방이 꼬이지 않도록 명확한 하위 경로 지정
 
     const quizData = [
       { q: "한국의 수도는 어디일까요?", a: "서울" },
@@ -141,6 +138,7 @@
       window.speechSynthesis.speak(speech);
     }
 
+    // [입장하기] 버튼을 누르면 과거의 10점 판정이나 인덱스를 무조건 깨끗하게 리셋합니다.
     window.joinGame = async function() {
       const input = document.getElementById("nickname-input");
       myName = input.value.trim();
@@ -151,24 +149,12 @@
       document.getElementById("answer-input").disabled = false;
       document.getElementById("answer-input").focus();
 
-      const roomSnap = await get(roomRef);
-      if (!roomSnap.exists()) {
-        await set(roomRef, {
-          currentIndex: 0,
-          players: { [myName]: 0 },
-          lastEvent: `${myName}님이 입장하셨습니다.`
-        });
-      } else {
-        const data = roomSnap.val();
-        const updatedPlayers = { ...data.players };
-        if (updatedPlayers[myName] === undefined) {
-          updatedPlayers[myName] = 0; 
-        }
-        await update(roomRef, {
-          players: updatedPlayers,
-          lastEvent: `${myName}님이 입장하셨습니다.`
-        });
-      }
+      // 🔄 강제 초기화 락 해제: 무조건 0번 문제, 내 점수 0점으로 데이터 강제 덮어쓰기 실행
+      await set(roomRef, {
+        currentIndex: 0,
+        players: { [myName]: 0 },
+        lastEvent: `${myName}님이 새로운 퀴즈쇼를 개설했습니다.`
+      });
 
       startListening();
     };
@@ -178,33 +164,31 @@
         if (!snapshot.exists()) return;
         const data = snapshot.val();
         
-        const serverIndex = data.currentIndex || 0;
-        const players = data.players || {};
-        const lastEvent = data.lastEvent || "";
+        const serverIndex = data.currentIndex ?? 0;
+        const players = data.players ?? {};
+        const lastEvent = data.lastEvent ?? "";
 
-        // 1. 실시간 점수판 업데이트
+        // 실시간 화면 스코어 갱신
         updateScoreboard(players, "score-list");
 
-        // 🏁 2. 모든 문제가 끝났을 때 결과 화면 전환 처리
+        // 🏁 모든 문제가 끝났을 때 성적표 화면 표출
         if (serverIndex >= quizData.length) {
           document.getElementById("game-screen").classList.add("hidden");
           document.getElementById("result-screen").classList.remove("hidden");
           
-          // 내 최종 합산 점수 띄우기
-          const myFinalScore = players[myName] || 0;
+          const myFinalScore = players[myName] ?? 0;
           document.getElementById("my-score-display").innerText = `나의 최종 점수: ${myFinalScore}점 / 10점`;
           
-          // 결과창용 최종 순위 리스트 업데이트
           updateScoreboard(players, "final-rank-list");
 
           if (localCurrentIndex !== serverIndex) {
-            aiSpeak(`모든 퀴즈가 종료되었습니다! 당신의 최종 점수는 ${myFinalScore}점입니다. 수고하셨습니다.`);
+            aiSpeak(`모든 퀴즈가 종료되었습니다. 당신의 합산 점수는 ${myFinalScore}점입니다.`);
             localCurrentIndex = serverIndex;
           }
           return;
         }
 
-        // 3. 문제 변경 및 TTS 제어
+        // 새 문제 출제 및 사회자 안내 (틀리든 맞추든 인덱스가 바뀌면 반응)
         if (localCurrentIndex !== serverIndex) {
           localCurrentIndex = serverIndex;
           const newQuestion = quizData[serverIndex].q;
@@ -212,10 +196,76 @@
           document.getElementById("answer-input").value = "";
           
           aiSpeak(`${lastEvent} 다음 문제입니다. ${newQuestion}`);
-        } else if (lastEvent && lastEvent.includes("입장")) {
+        } else if (lastEvent && lastEvent.includes("개설")) {
           aiSpeak(lastEvent);
         }
       });
     }
 
-    //
+    function updateScoreboard(players, targetId) {
+      const scoreList = document.getElementById(targetId);
+      if (!scoreList) return;
+      scoreList.innerHTML = "";
+      
+      const sortedPlayers = Object.entries(players).sort((a, b) => b[1] - a[1]);
+
+      sortedPlayers.forEach(([name, score], index) => {
+        const div = document.createElement("div");
+        div.className = `player-score ${name === myName ? 'is-me' : ''}`;
+        
+        const rankPrefix = targetId === "final-rank-list" ? `🥇 [${index + 1}등] ` : "";
+        div.innerHTML = `<span>${rankPrefix}${name} ${name === myName ? '(나)' : ''}</span> <span>${score}점</span>`;
+        scoreList.appendChild(div);
+      });
+    }
+
+    // 🎯 정답일 땐 1점 추가, 오답일 땐 0점 유지하되 둘 다 '무조건' 다음 문제 패스
+    document.getElementById("answer-input").addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        const inputElement = e.target;
+        const userAnswer = inputElement.value.trim().toLowerCase();
+        const correctAnswer = quizData[localCurrentIndex].a.toLowerCase();
+
+        // 중복 제출 막기
+        inputElement.disabled = true;
+
+        try {
+          const roomSnap = await get(roomRef);
+          const data = roomSnap.val();
+          
+          if (data.currentIndex !== localCurrentIndex) {
+            inputElement.disabled = false;
+            return;
+          } 
+
+          const updatedPlayers = { ...data.players };
+          let eventMessage = "";
+
+          if (userAnswer === correctAnswer) {
+            // 정답 판정 -> 무조건 1점 추가!
+            updatedPlayers[myName] = (updatedPlayers[myName] ?? 0) + 1;
+            eventMessage = `${myName}님이 정답을 맞추셨습니다!`;
+          } else {
+            // 오답 판정 -> 0점 유지, 사회자가 다음 문제로 넘기며 정답 스포일러
+            eventMessage = `${myName}님이 틀리셨습니다! 정답은 [ ${quizData[localCurrentIndex].a} ]였습니다.`;
+          }
+
+          // 맞추든 틀리든 무조건 currentIndex를 +1 시켜서 다음 문제 유도
+          await update(roomRef, {
+            currentIndex: data.currentIndex + 1,
+            players: updatedPlayers,
+            lastEvent: eventMessage
+          });
+
+        } catch (error) {
+          console.error("데이터 갱신 오류:", error);
+        } finally {
+          inputElement.disabled = false;
+          inputElement.value = "";
+          inputElement.focus();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
