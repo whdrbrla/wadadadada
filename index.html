@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도 (한글 완결판)</title>
+  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -55,7 +55,7 @@
     }
     .btn:hover { transform: translateY(-2px); opacity: 0.9; }
     .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none; }
-    .primary-btn { background: #ff7675; color: white; width: 100%; }
+    .primary-btn { background: #ff7675; color: white; width: 100%; } /* 매운맛 느낌의 색상 조정 */
     .ask-btn { background: #42a5f5; color: white; }
     .clear-btn { background: #b0bec5; color: white; }
     .button-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
@@ -111,13 +111,13 @@
     <div class="subtitle">GitHub Pages + Google Apps Script + OpenAI API + Firebase 멀티플레이 연동</div>
 
     <div class="info">
-      <strong>🚨 안내: 퀴즈 세트 내 모든 영어 주관식 문항이 제거되었습니다!</strong><br />
-      오직 한글 정답으로만 구성된 고난도 상식 대결입니다. 힌트가 필요할 땐 우측의 <strong>ChatGPT AI 찬스</strong>를 쓰세요!
+      <strong>🚨 경고: 문제의 난이도가 대폭 상승했습니다!</strong><br />
+      도저히 감이 안 잡힐 때는 우측의 <strong>ChatGPT AI 찬스</strong>를 적극적으로 사용하여 힌트를 얻어내세요!
     </div>
 
     <div id="login-screen">
       <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="10" />
-      <button class="btn primary-btn" onclick="joinGame()">한글 매운맛 퀴즈쇼 입장 (방 리셋)</button>
+      <button class="btn primary-btn" onclick="joinGame()">매운맛 퀴즈쇼 입장 (방 리셋)</button>
     </div>
 
     <div id="game-screen" class="hidden">
@@ -186,11 +186,11 @@
     // 최신 작동 주소 연동
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZZ8a29nrztNWWPs8yeMS_EqKXf1mCOjuT8Va84_14bgQcAnrk_nJ3sx20DLfJhyA/exec';
 
-    // 💯 100% 한글 정답으로만 재구성된 고난도 10문항
+    // 🔥 난이도가 대폭 업그레이드된 문제 세트 (10문항)
     const quizData = [
       { q: "조선시대에 왕이 승하한 후, 그의 공덕을 기려 붙이는 명칭을 시호라고 합니다. 그렇다면 왕이 생전에 국가를 통치하며 보여준 공적에 기반하여 사후 종묘에 신위를 모실 때 붙이는 '태조, 세종'과 같은 명칭을 무엇이라 할까요?", a: "묘호" },
       { q: "지구 대기권은 지표면에서 위로 올라갈수록 기온 변화에 따라 4개의 층으로 나뉩니다. 대류권 바로 위에 위치하며, 오존층이 존재하여 태양의 자외선을 흡수하는 이 기층의 이름은 무엇일까요?", a: "성층권" },
-      { q: "조선 시대 경제의 핵심이었던 대동법은 공물을 특산물 대신 '이것'으로 통일하여 바치게 한 세금 제도입니다. 농민들의 부담을 덜어주었던 이 제도의 기준이 된 핵심 현물 화폐는 무엇일까요?", a: "쌀" },
+      { q: "컴퓨터의 연산 속도 단위 중 하나로, 1초에 1조 번의 부동 소수점 연산을 처리할 수 있는 성능의 단위를 무엇이라고 할까요? (알파벳 5글자 대소문자 무관)", a: "teraflops" },
       { q: "화학 원소 기호 'Ag'를 가지며, 전기와 열의 전도율이 모든 금속 중 가장 높은 이 원소의 한국어 명칭은 무엇일까요?", a: "은" },
       { q: "세계에서 가장 면적이 넓은 나라는 러시아입니다. 그렇다면 세계에서 면적이 두 번째로 넓은 국가의 이름은 무엇일까요?", a: "캐나다" },
       { q: "인간의 뇌 구조에서 신체 평형과 정밀한 운동 조절을 담당하며, 대뇌 후하방에 위치한 이 부분의 명칭은 무엇일까요?", a: "소뇌" },
@@ -239,7 +239,7 @@
       await set(roomRef, {
         currentIndex: 0,
         players: { [myName]: 0 },
-        lastEvent: `${myName}님이 입장하여 한글 퀴즈 게임을 시작합니다.`
+        lastEvent: `${myName}님이 입장하여 매운맛 퀴즈 게임을 시작합니다.`
       });
 
       startListening();
@@ -266,7 +266,7 @@
           updateScoreboard(players, "final-rank-list");
 
           if (localCurrentIndex !== serverIndex) {
-            aiSpeak(`모든 한글 퀴즈쇼가 종료되었습니다. 최종 점수는 ${myFinalScore}점입니다.`);
+            aiSpeak(`모든 매운맛 퀴즈쇼가 끝났습니다. 최종 스코어는 ${myFinalScore}점입니다.`);
             localCurrentIndex = serverIndex;
           }
           return;
