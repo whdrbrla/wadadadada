@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방구석 AI 퀴즈쇼 + ChatGPT 찬스 (새 주소 버전)</title>
+  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도 (한글 완결판)</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -22,11 +22,12 @@
     
     .info {
       padding: 14px; margin-bottom: 20px; border-radius: 14px;
-      background: #e8f5e9; color: #2e7d32; font-size: 14px; line-height: 1.6;
+      background: #fff3cd; color: #856404; font-size: 14px; line-height: 1.6;
+      border: 1px solid #ffeeba;
     }
     .hidden { display: none !important; }
     
-    /* 메인 레이아웃 (게임판과 ChatGPT 창을 가로 분할) */
+    /* 메인 레이아웃 */
     .game-layout {
       display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
     }
@@ -34,7 +35,6 @@
       .game-layout { grid-template-columns: 1fr; }
     }
 
-    /* 구역 공통 스타일 */
     .panel {
       background: #f7f9fb; border: 1px solid #edf1f5;
       padding: 20px; border-radius: 18px;
@@ -55,7 +55,7 @@
     }
     .btn:hover { transform: translateY(-2px); opacity: 0.9; }
     .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none; }
-    .primary-btn { background: #42a5f5; color: white; width: 100%; }
+    .primary-btn { background: #ff7675; color: white; width: 100%; }
     .ask-btn { background: #42a5f5; color: white; }
     .clear-btn { background: #b0bec5; color: white; }
     .button-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
@@ -63,9 +63,10 @@
     /* 퀴즈 박스 및 입력창 */
     .quiz-box {
       background: #ffffff; border: 1px solid #ddd; padding: 20px; border-radius: 14px;
-      margin-bottom: 12px; min-height: 90px; display: flex;
+      margin-bottom: 12px; min-height: 110px; display: flex;
       align-items: center; justify-content: center;
-      font-size: 18px; font-weight: bold; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      font-size: 17px; font-weight: bold; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      line-height: 1.5;
     }
     #answer-input {
       width: 100%; padding: 12px; margin-bottom: 12px;
@@ -75,7 +76,7 @@
     /* 실시간 점수판 */
     .scoreboard { margin-top: 16px; border-top: 2px dashed #ddd; padding-top: 12px; }
     .player-score { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-    .is-me { color: #42a5f5; font-weight: bold; }
+    .is-me { color: #ff7675; font-weight: bold; }
 
     /* ChatGPT 입력 및 결과 창 */
     textarea {
@@ -99,24 +100,24 @@
     }
     .final-rank-title {
       font-size: 16px; font-weight: bold; color: #666; text-align: left;
-      margin-bottom: 8px; border-bottom: 2px solid #42a5f5; padding-bottom: 4px;
+      margin-bottom: 8px; border-bottom: 2px solid #ff7675; padding-bottom: 4px;
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>🎙️ AI 방구석 퀴즈쇼</h1>
+    <h1>🌶️ AI 방구석 퀴즈쇼 (매운맛)</h1>
     <div class="subtitle">GitHub Pages + Google Apps Script + OpenAI API + Firebase 멀티플레이 연동</div>
 
     <div class="info">
-      현재 구조: 퀴즈쇼 도중 모르는 문제가 나오면 우측의 <strong>ChatGPT AI 찬스</strong>를 이용해 질문할 수 있습니다.<br />
-      맞추든 틀리든 오답 시 0점 판정 후 다음 문제로 강제 이동하며, 게임이 끝나면 최종 합산 순위가 발표됩니다.
+      <strong>🚨 안내: 퀴즈 세트 내 모든 영어 주관식 문항이 제거되었습니다!</strong><br />
+      오직 한글 정답으로만 구성된 고난도 상식 대결입니다. 힌트가 필요할 땐 우측의 <strong>ChatGPT AI 찬스</strong>를 쓰세요!
     </div>
 
     <div id="login-screen">
       <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="10" />
-      <button class="btn primary-btn" onclick="joinGame()">퀴즈쇼 입장하기 (서버 리셋)</button>
+      <button class="btn primary-btn" onclick="joinGame()">한글 매운맛 퀴즈쇼 입장 (방 리셋)</button>
     </div>
 
     <div id="game-screen" class="hidden">
@@ -135,7 +136,7 @@
 
         <div class="panel">
           <div class="label">🤖 ChatGPT AI 찬스 (해설 및 힌트봇)</div>
-          <textarea id="questionInput" placeholder="문제가 어렵다면 힌트를 요청해 보세요! 예: '태양계 행성 크기 순서대로 알려줘'"></textarea>
+          <textarea id="questionInput" placeholder="문제가 너무 어렵다면 질문해 보세요! 예: '세상에서 가장 가벼운 싸움이 뭔지 힌트 줄래?'"></textarea>
           
           <div class="button-row">
             <button class="btn clear-btn" id="clearBtn">초기화</button>
@@ -157,7 +158,7 @@
     </div>
 
     <div id="result-screen" class="hidden">
-      <div class="final-banner">👑</div>
+      <div class="final-banner">🔥</div>
       <h2>퀴즈쇼 종료!</h2>
       <div class="my-final-score" id="my-score-display">나의 최종 점수: 0점</div>
       
@@ -182,33 +183,32 @@
     const db = getDatabase(app);
     const roomRef = ref(db, "quiz_room/live_session");
 
-    // 🔗 요청하신 새로운 Google Apps Script URL 주소로 완벽하게 교체되었습니다!
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKVJIv0zQSmuK85ek4W-x_OZcUyBaKM7KyMGXmOyFCXTSE-3ggQJQQFqF1qHJu3mk/exec';
+    // 최신 작동 주소 연동
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZZ8a29nrztNWWPs8yeMS_EqKXf1mCOjuT8Va84_14bgQcAnrk_nJ3sx20DLfJhyA/exec';
 
+    // 💯 100% 한글 정답으로만 재구성된 고난도 10문항
     const quizData = [
-      { q: "한국의 수도는 어디일까요?", a: "서울" },
-      { q: "사과를 영어로 하면 무엇일까요?", a: "apple" },
-      { q: "지구에서 가장 큰 바다는 어디일까요?", a: "태평양" },
-      { q: "스마트폰의 조상 격으로, 애플이 2007년에 처음 출시한 이것은?", a: "아이폰" },
-      { q: "조선시대 태조 이성계가 세운 조선의 첫 번째 법궁은?", a: "경복궁" },
-      { q: "컴퓨터의 뇌 역할을 하는 핵심 중앙 처리 장치의 약자는?", a: "cpu" },
-      { q: "세계에서 가장 높은 산의 이름은 무엇일까요?", a: "에베레스트" },
-      { q: "물(H2O)을 구성하는 두 가지 원소는 수소와 이것입니다. 무엇일까요?", a: "산소" },
-      { q: "태양계에서 가장 거대한 행성은 무엇일까요?", a: "목성" },
-      { q: "대한민국의 국화(나라 꽃)는 무엇일까요?", a: "무궁화" }
+      { q: "조선시대에 왕이 승하한 후, 그의 공덕을 기려 붙이는 명칭을 시호라고 합니다. 그렇다면 왕이 생전에 국가를 통치하며 보여준 공적에 기반하여 사후 종묘에 신위를 모실 때 붙이는 '태조, 세종'과 같은 명칭을 무엇이라 할까요?", a: "묘호" },
+      { q: "지구 대기권은 지표면에서 위로 올라갈수록 기온 변화에 따라 4개의 층으로 나뉩니다. 대류권 바로 위에 위치하며, 오존층이 존재하여 태양의 자외선을 흡수하는 이 기층의 이름은 무엇일까요?", a: "성층권" },
+      { q: "조선 시대 경제의 핵심이었던 대동법은 공물을 특산물 대신 '이것'으로 통일하여 바치게 한 세금 제도입니다. 농민들의 부담을 덜어주었던 이 제도의 기준이 된 핵심 현물 화폐는 무엇일까요?", a: "쌀" },
+      { q: "화학 원소 기호 'Ag'를 가지며, 전기와 열의 전도율이 모든 금속 중 가장 높은 이 원소의 한국어 명칭은 무엇일까요?", a: "은" },
+      { q: "세계에서 가장 면적이 넓은 나라는 러시아입니다. 그렇다면 세계에서 면적이 두 번째로 넓은 국가의 이름은 무엇일까요?", a: "캐나다" },
+      { q: "인간의 뇌 구조에서 신체 평형과 정밀한 운동 조절을 담당하며, 대뇌 후하방에 위치한 이 부분의 명칭은 무엇일까요?", a: "소뇌" },
+      { q: "신라 제27대 왕으로, 한국 역사상 최초의 여왕이자 첨성대와 황룡사 9층 목탑을 건립한 인물은 누구일까요?", a: "선덕여왕" },
+      { q: "제1차 세계 대전의 도화선이 된 사건으로, 1914년 오스트리아 황태자 부부가 보스니아의 수도에서 암살당한 사건을 일컫는 지명은 어디일까요?", a: "사라예보" },
+      { q: "[넌센스] 세상에서 가장 가벼운 싸움은 무엇일까요?", a: "박수" },
+      { q: "[넌센스] 아무리 빨리 달려도 절대 앞지를 수 없고, 밤만 되면 자꾸 나를 졸졸 따라오는 검은색 친구는 무엇일까요?", a: "그림자" }
     ];
 
     let myName = "";
     let localCurrentIndex = -1;
 
-    // 대화창 관련 컴포넌트 선언
     const questionInput = document.getElementById('questionInput');
     const answerBox = document.getElementById('answerBox');
     const statusBox = document.getElementById('status');
     const askBtn = document.getElementById('askBtn');
     const clearBtn = document.getElementById('clearBtn');
 
-    // ChatGPT 관련 이벤트 바인딩
     askBtn.addEventListener('click', askChatGPT);
     clearBtn.addEventListener('click', clearPage);
     questionInput.addEventListener('keydown', function(event) {
@@ -226,7 +226,6 @@
       window.speechSynthesis.speak(speech);
     }
 
-    // 퀴즈쇼 입장하기 및 서버 데이터 초기화
     window.joinGame = async function() {
       const input = document.getElementById("nickname-input");
       myName = input.value.trim();
@@ -240,13 +239,12 @@
       await set(roomRef, {
         currentIndex: 0,
         players: { [myName]: 0 },
-        lastEvent: `${myName}님이 입장하여 퀴즈 게임을 시작합니다.`
+        lastEvent: `${myName}님이 입장하여 한글 퀴즈 게임을 시작합니다.`
       });
 
       startListening();
     };
 
-    // 실시간 감시 및 뷰 제어
     function startListening() {
       onValue(roomRef, (snapshot) => {
         if (!snapshot.exists()) return;
@@ -268,7 +266,7 @@
           updateScoreboard(players, "final-rank-list");
 
           if (localCurrentIndex !== serverIndex) {
-            aiSpeak(`퀴즈쇼가 종료되었습니다. 당신의 최종 점수는 ${myFinalScore}점입니다.`);
+            aiSpeak(`모든 한글 퀴즈쇼가 종료되었습니다. 최종 점수는 ${myFinalScore}점입니다.`);
             localCurrentIndex = serverIndex;
           }
           return;
@@ -304,7 +302,6 @@
       });
     }
 
-    // 퀴즈 답안 제출 처리 (틀려도 무조건 다음 문제 패스)
     document.getElementById("answer-input").addEventListener("keydown", async (e) => {
       if (e.key === "Enter") {
         const inputElement = e.target;
@@ -348,7 +345,6 @@
       }
     });
 
-    // 🤖 ChatGPT API 통신 함수 (새로운 APPS_SCRIPT_URL 경유)
     async function askChatGPT() {
       const question = questionInput.value.trim();
 
