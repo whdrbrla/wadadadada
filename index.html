@@ -77,23 +77,29 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // 📍 보내주신 주소를 databaseURL에 넣었습니다! 나머지 키값만 채워주세요.
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",          // 👈 콘솔에서 확인 후 입력 필수!
+      apiKey: "YOUR_API_KEY",          // 👈 본인의 API 키 입력
       projectId: "test-90563", 
-      databaseURL: "https://test-90563-default-rtdb.firebaseio.com/", // 👈 여기에 연결됨
-      appId: "YOUR_APP_ID"             // 👈 콘솔에서 확인 후 입력 필수!
+      databaseURL: "https://test-90563-default-rtdb.firebaseio.com/", 
+      appId: "YOUR_APP_ID"             // 👈 본인의 앱 ID 입력
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const roomRef = ref(db, "quiz_room");
 
+    // 📚 10개로 늘어난 퀴즈 데이터셋
     const quizData = [
       { q: "한국의 수도는 어디일까요?", a: "서울" },
       { q: "사과를 영어로 하면 무엇일까요?", a: "apple" },
       { q: "지구에서 가장 큰 바다는 어디일까요?", a: "태평양" },
-      { q: "스마트폰의 조상 격으로, 애플이 2007년에 처음 출시한 이것은?", a: "아이폰" }
+      { q: "스마트폰의 조상 격으로, 애플이 2007년에 처음 출시한 이것은?", a: "아이폰" },
+      { q: "조선시대 태조 이성계가 세운 조선의 첫 번째 법궁은?", a: "경복궁" },
+      { q: "컴퓨터의 뇌 역할을 하는 핵심 중앙 처리 장치의 약자는?", a: "cpu" },
+      { q: "세계에서 가장 높은 산의 이름은 무엇일까요?", a: "에베레스트" },
+      { q: "물(H2O)을 구성하는 두 가지 원소는 수소와 이것입니다. 무엇일까요?", a: "산소" },
+      { q: "태양계에서 가장 거대한 행성은 무엇일까요?", a: "목성" },
+      { q: "대한민국의 국화(나라 꽃)는 무엇일까요?", a: "무궁화" }
     ];
 
     let myName = "";
@@ -127,7 +133,10 @@
         });
       } else {
         const data = roomSnap.val();
-        const updatedPlayers = { ...data.players, [myName]: 0 };
+        const updatedPlayers = { ...data.players };
+        if (updatedPlayers[myName] === undefined) {
+          updatedPlayers[myName] = 0; // 기존 점수가 없으면 0점 초기화
+        }
         await update(roomRef, {
           players: updatedPlayers,
           lastEvent: `${myName}님이 입장하셨습니다.`
@@ -138,7 +147,6 @@
     };
 
     function startListening() {
-      // 리얼타임 데이터베이스는 onValue를 사용해 실시간 감시를 합니다.
       onValue(roomRef, (snapshot) => {
         if (!snapshot.exists()) return;
         const data = snapshot.val();
@@ -162,13 +170,12 @@
         if (localCurrentIndex !== serverIndex) {
           localCurrentIndex = serverIndex;
           const newQuestion = quizData[serverIndex].q;
-          document.getElementById("question-display").innerText = `Q. ${newQuestion}`;
+          document.getElementById("question-display").innerText = `Q(${serverIndex + 1}/10). ${newQuestion}`;
           document.getElementById("answer-input").value = "";
           
           aiSpeak(`${lastEvent} 다음 문제입니다. ${newQuestion}`);
         } else if (lastEvent && lastEvent.includes("입장")) {
           aiSpeak(lastEvent);
-          // 읽고 난 후 이벤트 중복 방지를 위해 공백 처리(선택)
         }
       });
     }
@@ -187,30 +194,6 @@
       });
     }
 
+    // 🎯 정답/오답 판정 및 무조건 다음 문제 패스 로직
     document.getElementById("answer-input").addEventListener("keydown", async (e) => {
-      if (e.key === "Enter") {
-        const userAnswer = e.target.value.trim().toLowerCase();
-        const correctAnswer = quizData[localCurrentIndex].a.toLowerCase();
-
-        if (userAnswer === correctAnswer) {
-          const roomSnap = await get(roomRef);
-          const data = roomSnap.val();
-          
-          if (data.currentIndex !== localCurrentIndex) return; 
-
-          const updatedPlayers = { ...data.players };
-          updatedPlayers[myName] = (updatedPlayers[myName] || 0) + 10;
-
-          await update(roomRef, {
-            currentIndex: data.currentIndex + 1,
-            players: updatedPlayers,
-            lastEvent: `${myName}님이 정답을 맞추셨습니다!`
-          });
-        } else {
-          e.target.value = "";
-        }
-      }
-    });
-  </script>
-</body>
-</html>
+      if (e.key
