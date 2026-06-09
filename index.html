@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방구석 AI 퀴즈쇼 (RTDB 버전)</title>
+  <title>방구석 AI 퀴즈쇼 (최종 판정 버전)</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -19,6 +19,7 @@
     h1 { text-align: center; margin: 0 0 20px; font-size: 24px; color: #5a42ec; }
     .hidden { display: none !important; }
     
+    /* 닉네임 입력 화면 */
     #login-screen input {
       width: 100%; padding: 12px; margin-bottom: 12px;
       border: 2px solid #ddd; border-radius: 12px; font-size: 16px; outline: none;
@@ -30,6 +31,7 @@
     }
     button:hover { background: #432bca; transform: translateY(-2px); }
 
+    /* 게임 진행 화면 */
     .quiz-box {
       background: #f4f6f8; padding: 16px; border-radius: 14px;
       margin-bottom: 16px; min-height: 80px; display: flex;
@@ -41,6 +43,7 @@
       border: 2px solid #ddd; border-radius: 12px; font-size: 16px; text-align: center;
     }
     
+    /* 실시간 점수판 */
     .scoreboard {
       margin-top: 20px; border-top: 2px dashed #ddd; padding-top: 16px;
     }
@@ -50,6 +53,22 @@
       padding: 6px 0; font-size: 15px;
     }
     .is-me { color: #5a42ec; font-weight: bold; }
+
+    /* 🎉 최종 결과 화면 스타일 */
+    #result-screen {
+      text-align: center; padding: 10px 0;
+    }
+    .final-banner {
+      font-size: 48px; margin-bottom: 10px;
+    }
+    .my-final-score {
+      font-size: 22px; font-weight: bold; color: #ff4757; margin-bottom: 24px;
+      background: #ffeaa7; padding: 12px; border-radius: 12px;
+    }
+    .final-rank-title {
+      font-size: 16px; font-weight: bold; color: #666; text-align: left;
+      margin-bottom: 8px; border-bottom: 2px solid #5a42ec; padding-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -71,6 +90,15 @@
         <div id="score-list"></div>
       </div>
     </div>
+
+    <div id="result-screen" class="hidden">
+      <div class="final-banner">👑</div>
+      <h2>퀴즈쇼 종료!</h2>
+      <div class="my-final-score" id="my-score-display">나의 최종 점수: 0점</div>
+      
+      <div class="final-rank-title">📊 최종 전체 순위</div>
+      <div id="final-rank-list"></div>
+    </div>
   </div>
 
   <script type="module">
@@ -88,7 +116,6 @@
     const db = getDatabase(app);
     const roomRef = ref(db, "quiz_room");
 
-    // 📚 10개로 늘어난 퀴즈 데이터셋
     const quizData = [
       { q: "한국의 수도는 어디일까요?", a: "서울" },
       { q: "사과를 영어로 하면 무엇일까요?", a: "apple" },
@@ -135,7 +162,7 @@
         const data = roomSnap.val();
         const updatedPlayers = { ...data.players };
         if (updatedPlayers[myName] === undefined) {
-          updatedPlayers[myName] = 0; // 기존 점수가 없으면 0점 초기화
+          updatedPlayers[myName] = 0; 
         }
         await update(roomRef, {
           players: updatedPlayers,
@@ -155,18 +182,29 @@
         const players = data.players || {};
         const lastEvent = data.lastEvent || "";
 
-        updateScoreboard(players);
+        // 1. 실시간 점수판 업데이트
+        updateScoreboard(players, "score-list");
 
+        // 🏁 2. 모든 문제가 끝났을 때 결과 화면 전환 처리
         if (serverIndex >= quizData.length) {
-          document.getElementById("question-display").innerText = "🎉 모든 문제가 끝났습니다!";
-          document.getElementById("answer-input").disabled = true;
+          document.getElementById("game-screen").classList.add("hidden");
+          document.getElementById("result-screen").classList.remove("hidden");
+          
+          // 내 최종 합산 점수 띄우기
+          const myFinalScore = players[myName] || 0;
+          document.getElementById("my-score-display").innerText = `나의 최종 점수: ${myFinalScore}점 / 10점`;
+          
+          // 결과창용 최종 순위 리스트 업데이트
+          updateScoreboard(players, "final-rank-list");
+
           if (localCurrentIndex !== serverIndex) {
-            aiSpeak("모든 문제가 끝났습니다. 참여해 주신 여러분 감사합니다!");
+            aiSpeak(`모든 퀴즈가 종료되었습니다! 당신의 최종 점수는 ${myFinalScore}점입니다. 수고하셨습니다.`);
             localCurrentIndex = serverIndex;
           }
           return;
         }
 
+        // 3. 문제 변경 및 TTS 제어
         if (localCurrentIndex !== serverIndex) {
           localCurrentIndex = serverIndex;
           const newQuestion = quizData[serverIndex].q;
@@ -180,20 +218,4 @@
       });
     }
 
-    function updateScoreboard(players) {
-      const scoreList = document.getElementById("score-list");
-      scoreList.innerHTML = "";
-      
-      const sortedPlayers = Object.entries(players).sort((a, b) => b[1] - a[1]);
-
-      sortedPlayers.forEach(([name, score]) => {
-        const div = document.createElement("div");
-        div.className = `player-score ${name === myName ? 'is-me' : ''}`;
-        div.innerHTML = `<span>${name} ${name === myName ? '(나)' : ''}</span> <span>${score}점</span>`;
-        scoreList.appendChild(div);
-      });
-    }
-
-    // 🎯 정답/오답 판정 및 무조건 다음 문제 패스 로직
-    document.getElementById("answer-input").addEventListener("keydown", async (e) => {
-      if (e.key
+    //
