@@ -55,7 +55,7 @@
     }
     .btn:hover { transform: translateY(-2px); opacity: 0.9; }
     .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none; }
-    .primary-btn { background: #ff7675; color: white; width: 100%; } /* 매운맛 느낌의 색상 조정 */
+    .primary-btn { background: #ff7675; color: white; width: 100%; }
     .ask-btn { background: #42a5f5; color: white; }
     .clear-btn { background: #b0bec5; color: white; }
     .button-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
@@ -75,6 +75,7 @@
 
     /* 실시간 점수판 */
     .scoreboard { margin-top: 16px; border-top: 2px dashed #ddd; padding-top: 12px; }
+    .score-title { font-weight: bold; font-size: 15px; margin-bottom: 8px; color: #555; }
     .player-score { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
     .is-me { color: #ff7675; font-weight: bold; }
 
@@ -171,7 +172,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // ⚠️ Firebase 필수 키값을 여기에 대입해주세요!
+    // ⚠️ Firebase 필수 키값을 대입해주세요! (현재 예시 실시간 데이터베이스 연동 상태)
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY", 
       projectId: "test-90563", 
@@ -183,7 +184,7 @@
     const db = getDatabase(app);
     const roomRef = ref(db, "quiz_room/live_session");
 
-    // 최신 작동 주소 연동
+    // 구글 앱스 스크립트 웹 앱 배포 주소 연동
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzx34RO3jt1K0-DNjwIID3X42M_3uCbtzLWQA1sxNJwK6KlS1PKeq0uLY65EpI-PH27/exec';
 
     // 🔥 난이도가 대폭 업그레이드된 문제 세트 (10문항)
@@ -360,6 +361,9 @@
 
         const response = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain' // CORS 이슈 방지를 위해 text/plain 구조로 요청 송신
+          },
           body: JSON.stringify({
             question: question
           })
