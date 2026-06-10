@@ -359,11 +359,9 @@
         answerBox.textContent = '답변을 생성하는 중입니다...';
         statusBox.textContent = 'Apps Script 서버에 요청을 보내는 중입니다.';
 
+        // 수정 포인트: headers 속성을 제거하여 첫 번째 성공 코드와 완전히 동일하게 구조를 맞춤
         const response = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain' // CORS 이슈 방지를 위해 text/plain 구조로 요청 송신
-          },
           body: JSON.stringify({
             question: question
           })
