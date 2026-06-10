@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도</title>
+  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도 (Voice 에디션)</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -86,9 +86,11 @@
     }
     textarea:focus { border-color: #42a5f5; box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15); }
     .answer-box {
-      min-height: 140px; padding: 14px; border-radius: 14px; background: #ffffff;
+      min-height: 110px; padding: 14px; border-radius: 14px; background: #ffffff;
       border: 1px solid #ddd; line-height: 1.6; font-size: 14px; white-space: pre-wrap; word-break: break-word;
+      margin-bottom: 10px;
     }
+    audio { width: 100%; }
     .status { min-height: 20px; color: #666; font-size: 13px; margin-top: 6px; }
     .help { margin-top: 12px; font-size: 12px; color: #777; line-height: 1.5; }
 
@@ -108,12 +110,12 @@
 <body>
 
   <div class="container">
-    <h1>🌶️ AI 방구석 퀴즈쇼 (매운맛)</h1>
-    <div class="subtitle">GitHub Pages + Google Apps Script + OpenAI API + Firebase 멀티플레이 연동</div>
+    <h1>🌶️ AI 방구석 퀴즈쇼 (Voice 에디션)</h1>
+    <div class="subtitle">OpenAI Chat API로 힌트를 얻고, 똑똑한 TTS 음성으로 답변을 확인하세요!</div>
 
     <div class="info">
-      <strong>🚨 경고: 문제의 난이도가 대폭 상승했습니다!</strong><br />
-      도저히 감이 안 잡힐 때는 우측의 <strong>ChatGPT AI 찬스</strong>를 적극적으로 사용하여 힌트를 얻어내세요!
+      <strong>📢 음성 힌트 기능 추가!</strong><br />
+      오른쪽 찬스 창에 질문하면 AI가 텍스트로 힌트를 적어주고, 브라우저 스피커를 통해 <strong>OpenAI 오피셜 AI 성우 음성</strong>으로 힌트를 읽어줍니다.
     </div>
 
     <div id="login-screen">
@@ -136,7 +138,7 @@
         </div>
 
         <div class="panel">
-          <div class="label">🤖 ChatGPT AI 찬스 (해설 및 힌트봇)</div>
+          <div class="label">🤖 ChatGPT AI 찬스 (해설 및 음성 힌트봇)</div>
           <textarea id="questionInput" placeholder="문제가 너무 어렵다면 질문해 보세요! 예: '세상에서 가장 가벼운 싸움이 뭔지 힌트 줄래?'"></textarea>
           
           <div class="button-row">
@@ -146,8 +148,11 @@
           <div id="status" class="status"></div>
 
           <div style="margin-top: 12px;">
-            <div class="label">💡 AI 답변 내용</div>
+            <div class="label">💡 AI 답변 내용 (텍스트)</div>
             <div id="answerBox" class="answer-box">아직 질문이 없습니다.</div>
+            
+            <div class="label">🎵 AI 성우 보이스 (TTS 재생)</div>
+            <audio id="audioPlayer" controls></audio>
           </div>
           
           <div class="help">
@@ -172,7 +177,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // ⚠️ Firebase 필수 키값을 대입해주세요! (현재 예시 실시간 데이터베이스 연동 상태)
+    // ⚠️ Firebase 필수 키값 대입 (사용 중이시던 고유 키값이 있다면 여기에 다시 덮어써주세요)
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY", 
       projectId: "test-90563", 
@@ -184,10 +189,10 @@
     const db = getDatabase(app);
     const roomRef = ref(db, "quiz_room/live_session");
 
-    // 구글 앱스 스크립트 웹 앱 배포 주소 연동
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbHZJBtG5GHagAen9s2HYKMUCLlYylx9WRNXHmjh3O6WnfKYnLpcK8Z3ShRSyjZBQj/exec';
+    // 📢 성공하신 구글 앱스 스크립트 웹 앱 주소
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXG2LljC7UJ7CQq10_NYSbeTItoykeb7ZbHtcd8RE2CTs8lVvZDFKrsEA2pdboRfy7/exec';
 
-    // 🔥 난이도가 대폭 업그레이드된 문제 세트 (10문항)
+    // 퀴즈 문제 목록 (10문항)
     const quizData = [
       { q: "조선시대에 왕이 승하한 후, 그의 공덕을 기려 붙이는 명칭을 시호라고 합니다. 그렇다면 왕이 생전에 국가를 통치하며 보여준 공적에 기반하여 사후 종묘에 신위를 모실 때 붙이는 '태조, 세종'과 같은 명칭을 무엇이라 할까요?", a: "묘호" },
       { q: "지구 대기권은 지표면에서 위로 올라갈수록 기온 변화에 따라 4개의 층으로 나뉩니다. 대류권 바로 위에 위치하며, 오존층이 존재하여 태양의 자외선을 흡수하는 이 기층의 이름은 무엇일까요?", a: "성층권" },
@@ -209,21 +214,21 @@
     const statusBox = document.getElementById('status');
     const askBtn = document.getElementById('askBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const audioPlayer = document.getElementById('audioPlayer');
 
-    askBtn.addEventListener('click', askChatGPT);
+    askBtn.addEventListener('click', askChatGPTAndTTS);
     clearBtn.addEventListener('click', clearPage);
     questionInput.addEventListener('keydown', function(event) {
       if (event.key === 'Enter' && event.ctrlKey) {
-        askChatGPT();
+        askChatGPTAndTTS();
       }
     });
 
-    function aiSpeak(text) {
+    // 기본 Web Speech API 알림용 독백 스피치
+    function systemSpeak(text) {
       window.speechSynthesis.cancel();
       const speech = new SpeechSynthesisUtterance(text);
       speech.lang = "ko-KR";
-      speech.rate = 1.0;
-      speech.pitch = 1.0;
       window.speechSynthesis.speak(speech);
     }
 
@@ -267,7 +272,7 @@
           updateScoreboard(players, "final-rank-list");
 
           if (localCurrentIndex !== serverIndex) {
-            aiSpeak(`모든 매운맛 퀴즈쇼가 끝났습니다. 최종 스코어는 ${myFinalScore}점입니다.`);
+            systemSpeak(`모든 매운맛 퀴즈쇼가 끝났습니다. 최종 스코어는 ${myFinalScore}점입니다.`);
             localCurrentIndex = serverIndex;
           }
           return;
@@ -279,9 +284,9 @@
           document.getElementById("question-display").innerText = `Q(문제 ${serverIndex + 1}/10). ${newQuestion}`;
           document.getElementById("answer-input").value = "";
           
-          aiSpeak(`${lastEvent} 다음 문제입니다. ${newQuestion}`);
+          systemSpeak(`${lastEvent} 다음 문제입니다. ${newQuestion}`);
         } else if (lastEvent && lastEvent.includes("입장")) {
-          aiSpeak(lastEvent);
+          systemSpeak(lastEvent);
         }
       });
     }
@@ -346,7 +351,8 @@
       }
     });
 
-    async function askChatGPT() {
+    // 🚀 [핵심 핵심 기능] Chat으로 답변을 받고 이를 즉시 TTS 음성 데이터로 한 번 더 요청하는 파이프라인
+    async function askChatGPTAndTTS() {
       const question = questionInput.value.trim();
 
       if (!question) {
@@ -356,32 +362,79 @@
 
       try {
         setLoading(true);
-        answerBox.textContent = '답변을 생성하는 중입니다...';
-        statusBox.textContent = 'Apps Script 서버에 요청을 보내는 중입니다.';
+        audioPlayer.removeAttribute('src');
+        answerBox.textContent = '힌트 답변을 생각하는 중입니다...';
+        statusBox.textContent = '1단계: ChatGPT 답변 생성 중...';
 
-        // 수정 포인트: headers 속성을 제거하여 첫 번째 성공 코드와 완전히 동일하게 구조를 맞춤
-        const response = await fetch(APPS_SCRIPT_URL, {
+        // 1단계: Apps Script의 handleChat() 호출
+        const chatResponse = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           body: JSON.stringify({
-            question: question
+            type: 'chat',
+            question: `현재 퀴즈 문제는 다음과 같습니다: "${quizData[localCurrentIndex].q}". 유저의 질문: "${question}". 절대 정답을 노골적으로 말하지 말고 은유적인 힌트나 해설만 3문장 이내로 친절하게 답해줘.`
           })
         });
 
-        const data = await response.json();
+        const chatData = await chatResponse.json();
+        if (chatData.error) throw new Error(chatData.error);
+        
+        const aiHintText = chatData.answer || '답변을 생성하지 못했습니다.';
+        answerBox.textContent = aiHintText;
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
+        // 2단계: 생성된 답변 텍스트를 바탕으로 handleTTS() 추가 연쇄 호출
+        statusBox.textContent = '2단계: AI 고품질 성우 음성 변환 중...';
+        
+        const ttsResponse = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'tts',
+            text: aiHintText,
+            model: 'tts-1',
+            voice: 'nova', // 멋진 여성 내레이터 보이스 (alloy, onyx 등으로 변경 가능)
+            speed: 1.0
+          })
+        });
 
-        answerBox.textContent = data.answer || '답변을 가져오지 못했습니다.';
-        statusBox.textContent = '답변 생성 완료';
+        const ttsData = await ttsResponse.json();
+        if (ttsData.error) throw new Error(ttsData.error);
+        if (!ttsData.audioBase64) throw new Error('음성 바이너리를 받지 못했습니다.');
+
+        // base64 데이터를 URL 스트림으로 변경하여 브라우저 오디오 기기에 주입
+        const audioUrl = base64ToAudioUrl(ttsData.audioBase64, 'audio/mpeg');
+        audioPlayer.src = audioUrl;
+        
+        // 자동 재생 실행
+        audioPlayer.play().catch(e => console.log("자동 재생이 차단되었습니다. 재생 버튼을 직접 눌러주세요."));
+        statusBox.textContent = '음성 생성 완료 및 자동 재생 시작!';
+
       } catch (error) {
         console.error(error);
         answerBox.textContent = '오류가 발생했습니다.\n\n' + error.message;
-        statusBox.textContent = '요청 실패';
+        statusBox.textContent = '요청 처리 실패';
       } finally {
         setLoading(false);
       }
+    }
+
+    // Base64 문자열을 Blob URL로 변환해주는 파싱 헬퍼 함수
+    function base64ToAudioUrl(base64, mimeType) {
+      const byteCharacters = atob(base64);
+      const byteArrays = [];
+
+      for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length);
+
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+
+      const blob = new Blob(byteArrays, { type: mimeType });
+      return URL.createObjectURL(blob);
     }
 
     function setLoading(isLoading) {
@@ -391,8 +444,9 @@
 
     function clearPage() {
       questionInput.value = '';
-      answerBox.textContent = '아직 답변이 없습니다.';
+      answerBox.textContent = '아직 질문이 없습니다.';
       statusBox.textContent = '';
+      audioPlayer.removeAttribute('src');
     }
   </script>
 </body>
