@@ -111,11 +111,11 @@
 
   <div class="container">
     <h1>🌶️ AI 방구석 퀴즈쇼 (Voice 에디션)</h1>
-    <div class="subtitle">OpenAI Chat API로 정답과 해설을 얻고, 똑똑한 TTS 음성으로 답변을 확인하세요!</div>
+    <div class="subtitle">OpenAI Chat API로 정확한 정답을 확인하고, 똑똑한 TTS 음성으로 들어보세요!</div>
 
     <div class="info">
       <strong>📢 AI 찬스 기능 (정답 및 해설)</strong><br />
-      오른쪽 찬스 창에 질문하면 AI가 텍스트로 <strong>퀴즈의 정확한 정답과 친절한 해설</strong>을 적어주고, OpenAI 공식 AI 성우 음성으로 소리 내어 읽어줍니다.
+      오른쪽 찬스 창에 질문하면 AI가 텍스트로 <strong>퀴즈의 명확한 정답과 친절한 해설</strong>을 즉시 제공하고, OpenAI 공식 AI 성우 음성으로 소리 내어 읽어줍니다.
     </div>
 
     <div id="login-screen">
@@ -138,8 +138,8 @@
         </div>
 
         <div class="panel">
-          <div class="label">🤖 ChatGPT AI 찬스 (정답 및 해설봇)</div>
-          <textarea id="questionInput" placeholder="정답이나 해설이 궁금하다면 물어보세요! 예: '이 문제 정답이 뭐야?', '왜 그게 정답인지 설명해줘'"></textarea>
+          <div class="label">🤖 ChatGPT AI 찬스 (정답 마스터봇)</div>
+          <textarea id="questionInput" placeholder="정답이나 해설이 알고 싶다면 물어보세요! 예: '이 문제 정답이 뭐야?', '정답 알려줘'"></textarea>
           
           <div class="button-row">
             <button class="btn clear-btn" id="clearBtn">초기화</button>
@@ -351,7 +351,7 @@
       }
     });
 
-    // 🚀 [핵심 기능] Chat으로 정답과 해설을 직접 받고 이를 TTS 음성으로 재생하는 파이프라인
+    // 🚀 [핵심 기능] Chat으로 정답을 강제 주입하여 답변을 생성하고 TTS로 출력하는 파이프라인
     async function askChatGPTAndTTS() {
       const question = questionInput.value.trim();
 
@@ -363,15 +363,27 @@
       try {
         setLoading(true);
         audioPlayer.removeAttribute('src');
-        answerBox.textContent = '정답과 해설을 정리하는 중입니다...';
+        answerBox.textContent = '확실한 정답과 해설을 가져오는 중입니다...';
         statusBox.textContent = '1단계: ChatGPT 답변 생성 중...';
 
-        // 1단계: Apps Script의 handleChat() 호출 (★프롬프트 수정 완료★)
+        // 1단계: Apps Script의 handleChat() 호출 (★두괄식 정답 강제 프롬프트 적용★)
         const chatResponse = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           body: JSON.stringify({
             type: 'chat',
-            question: `현재 퀴즈 문제는 다음과 같습니다: "${quizData[localCurrentIndex].q}". 이 문제의 정확한 정답은 "${quizData[localCurrentIndex].a}" 입니다. 유저의 질문: "${question}". 유저의 질문에 친절하게 대답하면서, 이 문제의 정답이 무엇인지 명확하게 밝히고 그 이유(해설)를 3문장 이내로 명확하게 설명해줘.`
+            question: `
+              [필독 지시사항]
+              너는 지금 사용자가 출제한 퀴즈의 명확한 '정답'과 '해설'을 제공하는 마스터봇이다.
+              절대 힌트만 주거나 빙빙 돌려 표현하지 마라. 유저가 어떤 질문을 하든, 최우선 순위는 문제의 정답을 명확하게 밝히는 것이다.
+
+              - 현재 진행 중인 문제: "${quizData[localCurrentIndex].q}"
+              - 이 문제의 실제 정답 데이터: "${quizData[localCurrentIndex].a}"
+              - 유저의 질문 내용: "${question}"
+
+              [출력 조건 및 형태 제한]
+              반드시 첫 문장을 "이 문제의 정답은 '${quizData[localCurrentIndex].a}'입니다." 로 시작하도록 출력 양식을 고정해라.
+              그 뒤에 줄바꿈을 한 후, 왜 그것이 정답인지 핵심 이유와 설명을 2문장 이내로 명확하고 친절하게 덧붙여서 완성해라.
+            `.trim()
           })
         });
 
