@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도 (Voice 에디션)</title>
+  <title>방구석 AI 퀴즈쇼 - 매운맛 난이도 (Voice 로그 기록 에디션)</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -114,8 +114,8 @@
     <div class="subtitle">OpenAI Chat API로 정확한 정답을 확인하고, 똑똑한 TTS 음성으로 들어보세요!</div>
 
     <div class="info">
-      <strong>📢 AI 찬스 기능 (정답 및 해설)</strong><br />
-      오른쪽 찬스 창에 질문하면 AI가 텍스트로 <strong>퀴즈의 명확한 정답과 친절한 해설</strong>을 즉시 제공하고, OpenAI 공식 AI 성우 음성으로 소리 내어 읽어줍니다.
+      <strong>📢 AI 찬스 기능 및 오답 로깅 활성화</strong><br />
+      이제 사용자가 각 문제마다 <strong>무엇을 타이핑해서 제출했는지, 어떤 오답으로 패배했는지</strong> 모든 상세 정보가 Firebase DB에 실시간 안전 저장됩니다.
     </div>
 
     <div id="login-screen">
@@ -174,8 +174,9 @@
   </div>
 
   <script type="module">
+    // 💡 로그 생성 시 고유 ID 값을 편하게 부여하기 위해 push를 함께 import 합니다.
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, update, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     // ⚠️ Firebase 필수 키값 대입 (사용 중이시던 고유 키값이 있다면 여기에 다시 덮어써주세요)
     const firebaseConfig = {
@@ -224,7 +225,6 @@
       }
     });
 
-    // 기본 Web Speech API 알림용 독백 스피치
     function systemSpeak(text) {
       window.speechSynthesis.cancel();
       const speech = new SpeechSynthesisUtterance(text);
@@ -242,6 +242,7 @@
       document.getElementById("answer-input").disabled = false;
       document.getElementById("answer-input").focus();
 
+      // 방 진입 및 리셋 시 기존 로그가 충돌하지 않도록 초기화 정보를 보존하거나 갱신합니다.
       await set(roomRef, {
         currentIndex: 0,
         players: { [myName]: 0 },
@@ -308,12 +309,17 @@
       });
     }
 
+    // 🚀 [업데이트 기능] 유저의 타이핑 기록, 틀린 값, 정답 여부를 상세 로그로 Firebase에 기록
     document.getElementById("answer-input").addEventListener("keydown", async (e) => {
       if (e.key === "Enter") {
         const inputElement = e.target;
-        const userAnswer = inputElement.value.trim().toLowerCase();
-        const correctAnswer = quizData[localCurrentIndex].a.toLowerCase();
+        const rawUserAnswer = inputElement.value.trim(); // 원래 친 값 보존용
+        const userAnswer = rawUserAnswer.toLowerCase();
+        
+        const currentQuizObj = quizData[localCurrentIndex];
+        const correctAnswer = currentQuizObj.a.toLowerCase();
 
+        if (!rawUserAnswer) return; // 빈 값 입력 무시
         inputElement.disabled = true;
 
         try {
@@ -327,14 +333,31 @@
 
           const updatedPlayers = { ...data.players };
           let eventMessage = "";
+          let isCorrect = false;
 
           if (userAnswer === correctAnswer) {
             updatedPlayers[myName] = (updatedPlayers[myName] ?? 0) + 1;
             eventMessage = `${myName}님이 정답을 맞추셨습니다!`;
+            isCorrect = true;
           } else {
-            eventMessage = `${myName}님이 오답을 냈습니다! 정답은 [ ${quizData[localCurrentIndex].a} ]였습니다.`;
+            eventMessage = `${myName}님이 오답을 냈습니다! 정답은 [ ${currentQuizObj.a} ]였습니다.`;
+            isCorrect = false;
           }
 
+          // 📊 1. Firebase "quiz_room/live_session/logs" 노드 밑에 상세 정보 로깅하기
+          const logRef = ref(db, "quiz_room/live_session/logs");
+          const newLogRef = push(logRef); // 고유 식별 키 자동생성
+          await set(newLogRef, {
+            user: myName,                                    // 유저 닉네임
+            questionIndex: localCurrentIndex + 1,            // 문제 번호 (1~10)
+            questionText: currentQuizObj.q,                 // 문제 본문 내용
+            userTyped: rawUserAnswer,                        // 내가 실제로 타이핑해서 제출한 내용
+            correctAnswer: currentQuizObj.a,                 // 가차 없는 실제 정답 데이터
+            isCorrect: isCorrect,                            // 맞았는지 틀렸는지 여부 (true/false)
+            timestamp: new Date().toISOString()              // 기록된 시각
+          });
+
+          // 2. 메인 게임 세션 트랙 업그레이드
           await update(roomRef, {
             currentIndex: data.currentIndex + 1,
             players: updatedPlayers,
@@ -342,7 +365,7 @@
           });
 
         } catch (error) {
-          console.error(error);
+          console.error("Firebase 로깅 실패:", error);
         } finally {
           inputElement.disabled = false;
           inputElement.value = "";
@@ -351,7 +374,6 @@
       }
     });
 
-    // 🚀 [핵심 기능] Chat으로 정답을 강제 주입하여 답변을 생성하고 TTS로 출력하는 파이프라인
     async function askChatGPTAndTTS() {
       const question = questionInput.value.trim();
 
@@ -366,7 +388,6 @@
         answerBox.textContent = '확실한 정답과 해설을 가져오는 중입니다...';
         statusBox.textContent = '1단계: ChatGPT 답변 생성 중...';
 
-        // 1단계: Apps Script의 handleChat() 호출 (★두괄식 정답 강제 프롬프트 적용★)
         const chatResponse = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           body: JSON.stringify({
@@ -393,7 +414,6 @@
         const aiHintText = chatData.answer || '답변을 생성하지 못했습니다.';
         answerBox.textContent = aiHintText;
 
-        // 2단계: 생성된 답변 텍스트를 바탕으로 handleTTS() 추가 연쇄 호출
         statusBox.textContent = '2단계: AI 고품질 성우 음성 변환 중...';
         
         const ttsResponse = await fetch(APPS_SCRIPT_URL, {
@@ -402,7 +422,7 @@
             type: 'tts',
             text: aiHintText,
             model: 'tts-1',
-            voice: 'nova', // 멋진 여성 내레이터 보이스 (alloy, onyx 등으로 변경 가능)
+            voice: 'nova',
             speed: 1.0
           })
         });
@@ -411,12 +431,10 @@
         if (ttsData.error) throw new Error(ttsData.error);
         if (!ttsData.audioBase64) throw new Error('음성 바이너리를 받지 못했습니다.');
 
-        // base64 데이터를 URL 스트림으로 변경하여 브라우저 오디오 기기에 주입
         const audioUrl = base64ToAudioUrl(ttsData.audioBase64, 'audio/mpeg');
         audioPlayer.src = audioUrl;
         
-        // 자동 재생 실행
-        audioPlayer.play().catch(e => console.log("자동 재생이 차단되었습니다. 재생 버튼을 직접 눌러주세요."));
+        audioPlayer.play().catch(e => console.log("자동 재생이 차단되었습니다."));
         statusBox.textContent = '음성 생성 완료 및 자동 재생 시작!';
 
       } catch (error) {
@@ -428,7 +446,6 @@
       }
     }
 
-    // Base64 문자열을 Blob URL로 변환해주는 파싱 헬퍼 함수
     function base64ToAudioUrl(base64, mimeType) {
       const byteCharacters = atob(base64);
       const byteArrays = [];
