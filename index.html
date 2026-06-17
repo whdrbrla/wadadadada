@@ -111,11 +111,11 @@
 
   <div class="container">
     <h1>🌶️ AI 방구석 퀴즈쇼 (Voice 에디션)</h1>
-    <div class="subtitle">OpenAI Chat API로 힌트를 얻고, 똑똑한 TTS 음성으로 답변을 확인하세요!</div>
+    <div class="subtitle">OpenAI Chat API로 정답과 해설을 얻고, 똑똑한 TTS 음성으로 답변을 확인하세요!</div>
 
     <div class="info">
-      <strong>📢 음성 힌트 기능 추가!</strong><br />
-      오른쪽 찬스 창에 질문하면 AI가 텍스트로 힌트를 적어주고, 브라우저 스피커를 통해 <strong>OpenAI 오피셜 AI 성우 음성</strong>으로 힌트를 읽어줍니다.
+      <strong>📢 AI 찬스 기능 (정답 및 해설)</strong><br />
+      오른쪽 찬스 창에 질문하면 AI가 텍스트로 <strong>퀴즈의 정확한 정답과 친절한 해설</strong>을 적어주고, OpenAI 공식 AI 성우 음성으로 소리 내어 읽어줍니다.
     </div>
 
     <div id="login-screen">
@@ -138,8 +138,8 @@
         </div>
 
         <div class="panel">
-          <div class="label">🤖 ChatGPT AI 찬스 (해설 및 음성 힌트봇)</div>
-          <textarea id="questionInput" placeholder="문제가 너무 어렵다면 질문해 보세요! 예: '세상에서 가장 가벼운 싸움이 뭔지 힌트 줄래?'"></textarea>
+          <div class="label">🤖 ChatGPT AI 찬스 (정답 및 해설봇)</div>
+          <textarea id="questionInput" placeholder="정답이나 해설이 궁금하다면 물어보세요! 예: '이 문제 정답이 뭐야?', '왜 그게 정답인지 설명해줘'"></textarea>
           
           <div class="button-row">
             <button class="btn clear-btn" id="clearBtn">초기화</button>
@@ -351,7 +351,7 @@
       }
     });
 
-    // 🚀 [핵심 핵심 기능] Chat으로 답변을 받고 이를 즉시 TTS 음성 데이터로 한 번 더 요청하는 파이프라인
+    // 🚀 [핵심 기능] Chat으로 정답과 해설을 직접 받고 이를 TTS 음성으로 재생하는 파이프라인
     async function askChatGPTAndTTS() {
       const question = questionInput.value.trim();
 
@@ -363,15 +363,15 @@
       try {
         setLoading(true);
         audioPlayer.removeAttribute('src');
-        answerBox.textContent = '힌트 답변을 생각하는 중입니다...';
+        answerBox.textContent = '정답과 해설을 정리하는 중입니다...';
         statusBox.textContent = '1단계: ChatGPT 답변 생성 중...';
 
-        // 1단계: Apps Script의 handleChat() 호출
+        // 1단계: Apps Script의 handleChat() 호출 (★프롬프트 수정 완료★)
         const chatResponse = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           body: JSON.stringify({
             type: 'chat',
-            question: `현재 퀴즈 문제는 다음과 같습니다: "${quizData[localCurrentIndex].q}". 유저의 질문: "${question}". 절대 정답을 노골적으로 말하지 말고 은유적인 힌트나 해설만 3문장 이내로 친절하게 답해줘.`
+            question: `현재 퀴즈 문제는 다음과 같습니다: "${quizData[localCurrentIndex].q}". 이 문제의 정확한 정답은 "${quizData[localCurrentIndex].a}" 입니다. 유저의 질문: "${question}". 유저의 질문에 친절하게 대답하면서, 이 문제의 정답이 무엇인지 명확하게 밝히고 그 이유(해설)를 3문장 이내로 명확하게 설명해줘.`
           })
         });
 
